@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI, Type, Schema } from "@google/genai";
-import { adminDb } from "@/lib/firebase/admin";
+import { adminDb, adminStorage } from "@/lib/firebase/admin";
+import sharp from "sharp";
+import { v4 as uuidv4 } from "uuid";
 
 const ai = new GoogleGenAI({});
 
@@ -29,6 +31,10 @@ const iqamaSchema: Schema = {
     employerId: { type: Type.STRING, description: "Employer ID (هوية صاحب العمل)" },
     employer: { type: Type.STRING, description: "Employer or sponsor name in English" },
     employerArabic: { type: Type.STRING, description: "Employer or sponsor name in Arabic (اسم صاحب العمل)" },
+    photoBoundingBox: { 
+      type: Type.STRING, 
+      description: "Bounding box of the person's photo/face in format [ymin, xmin, ymax, xmax] normalized to 1000. Example: [200, 700, 500, 950]" 
+    },
   },
   required: [
     "name", "nameArabic", "iqamaNumber", "nationality", "nationalityArabic",
@@ -75,16 +81,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid document type" }, { status: 400 });
     }
 
-    // Convert file to base64
+    // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer();
-    const base64Data = Buffer.from(arrayBuffer).toString("base64");
+    const fileBuffer = Buffer.from(arrayBuffer);
+    const base64Data = fileBuffer.toString("base64");
 
     // Select the appropriate prompt and schema
     let prompt = "";
     let schema: Schema;
 
     if (documentType === "iqama") {
-      prompt = "Extract details from this Saudi Iqama (Residence Permit). Return strictly JSON.";
+      prompt = "Extract details from this Saudi Iqama (Residence Permit). Make sure to extract the bounding box for the profile photo. Return strictly JSON.";
       schema = iqamaSchema;
     } else if (documentType === "tub") {
       prompt = "Extract details from this Saudi TUB card. Return strictly JSON.";
@@ -119,18 +126,70 @@ export async function POST(req: NextRequest) {
 
     const data = JSON.parse(response.text || "{}");
 
+    let profilePhotoUrl = null;
+
+    // Handle photo cropping if bounding box is provided
+    if (data.photoBoundingBox) {
+      try {
+        const bboxMatches = data.photoBoundingBox.match(/\[?(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\]?/);
+        if (bboxMatches) {
+          const [_, ymin, xmin, ymax, xmax] = bboxMatches.map(Number);
+          
+          // Get original image dimensions
+          const metadata = await sharp(fileBuffer).metadata();
+          const { width, height } = metadata;
+
+          if (width && height) {
+            // Convert normalized coordinates (0-1000) to pixel values
+            const left = Math.round((xmin / 1000) * width);
+            const top = Math.round((ymin / 1000) * height);
+            const cropWidth = Math.round(((xmax - xmin) / 1000) * width);
+            const cropHeight = Math.round(((ymax - ymin) / 1000) * height);
+
+            // Crop image
+            const croppedBuffer = await sharp(fileBuffer)
+              .extract({ left, top, width: cropWidth, height: cropHeight })
+              .toFormat("jpeg")
+              .toBuffer();
+
+            // Save to local server file system (public/uploads/profile_photos)
+            const { promises: fs } = await import("fs");
+            const path = await import("path");
+            
+            const uploadDir = path.join(process.cwd(), "public", "uploads", "profile_photos");
+            await fs.mkdir(uploadDir, { recursive: true });
+            
+            // Use iqamaNumber for filename if available, otherwise fallback to uuid
+            const baseFileName = data.iqamaNumber || data.cardNumber || data.passportNumber || uuidv4();
+            const fileName = `${baseFileName}.jpg`;
+            const filePath = path.join(uploadDir, fileName);
+            await fs.writeFile(filePath, croppedBuffer);
+
+            // Set the public URL to the local file path
+            profilePhotoUrl = `/uploads/profile_photos/${fileName}`;
+            data.profilePhotoUrl = profilePhotoUrl;
+          }
+        }
+      } catch (cropError) {
+        console.error("Error cropping image:", cropError);
+        // Continue saving document even if cropping fails
+      }
+    }
+
     // Store in Firebase Firestore
     const docRef = await adminDb.collection("extracted_documents").add({
       documentType,
       extractedData: data,
-      status: "pending_verification", // Worker needs to verify this later
+      profilePhotoUrl,
+      status: "pending_verification",
       createdAt: new Date().toISOString(),
     });
 
     return NextResponse.json({ 
       success: true, 
       documentId: docRef.id,
-      data 
+      data,
+      profilePhotoUrl
     }, { status: 200 });
 
   } catch (error: any) {

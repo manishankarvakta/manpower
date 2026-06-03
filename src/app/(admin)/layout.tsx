@@ -31,6 +31,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <SheetContent side="left">
               <nav className="flex flex-col gap-4 mt-8">
                 <Link href="/admin" className="text-lg font-semibold hover:text-primary">Dashboard</Link>
+                <Link href="/admin/worker" className="text-lg font-semibold hover:text-primary">Workers</Link>
                 <Link href="/admin/verifications" className="text-lg font-semibold hover:text-primary">Verifications</Link>
               </nav>
             </SheetContent>
@@ -39,6 +40,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <h1 className="font-outfit text-2xl font-bold text-primary">Admin Control Center</h1>
             <nav className="hidden md:flex gap-4">
               <Link href="/admin" className="text-muted-foreground hover:text-foreground">Dashboard</Link>
+              <Link href="/admin/worker" className="text-muted-foreground hover:text-foreground">Workers</Link>
               <Link href="/admin/verifications" className="text-muted-foreground hover:text-foreground">Verifications</Link>
             </nav>
           </div>
