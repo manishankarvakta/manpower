@@ -5,33 +5,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Loader2, UploadCloud, CheckCircle } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
 
-interface IqamaData {
-  name?: string;
-  nameArabic?: string;
-  iqamaNumber?: string;
-  nationality?: string;
-  profession?: string;
-  dateOfBirth?: string;
-  expiryDate?: string;
-  employer?: string;
-}
-
-export function IqamaUploader() {
+export function DocumentUploader() {
+  const [documentType, setDocumentType] = useState<string>("iqama");
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [extractedData, setExtractedData] = useState<IqamaData | null>(null);
+  const [extractedData, setExtractedData] = useState<any>(null);
+  const [documentId, setDocumentId] = useState<string | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       setFile(selectedFile);
       setPreviewUrl(URL.createObjectURL(selectedFile));
-      setExtractedData(null); // Reset extracted data on new file selection
+      setExtractedData(null);
+      setDocumentId(null);
     }
   };
 
@@ -40,12 +33,14 @@ export function IqamaUploader() {
 
     setLoading(true);
     setExtractedData(null);
+    setDocumentId(null);
 
     const formData = new FormData();
-    formData.append("iqamaImage", file);
+    formData.append("documentImage", file);
+    formData.append("documentType", documentType);
 
     try {
-      const response = await fetch("/api/extract-iqama", {
+      const response = await fetch("/api/extract-document", {
         method: "POST",
         body: formData,
       });
@@ -57,7 +52,8 @@ export function IqamaUploader() {
       }
 
       setExtractedData(result.data);
-      toast.success("Document analyzed successfully!");
+      setDocumentId(result.documentId);
+      toast.success("Document analyzed and securely saved to database!");
     } catch (error: any) {
       console.error(error);
       toast.error(error.message || "Something went wrong.");
@@ -71,16 +67,27 @@ export function IqamaUploader() {
       {/* Upload Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Upload Iqama</CardTitle>
+          <CardTitle>Upload Document</CardTitle>
           <CardDescription>
-            Upload a clear image of your Iqama to auto-fill your profile details.
+            Select the document type and upload a clear image to autofill your profile.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
+          <Tabs value={documentType} onValueChange={(val) => {
+            setDocumentType(val);
+            setExtractedData(null); // Clear previous extractions if type changes
+          }} className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="iqama">Iqama</TabsTrigger>
+              <TabsTrigger value="tub">TUB Card</TabsTrigger>
+              <TabsTrigger value="passport">Passport</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
           <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 hover:bg-muted/50 transition-colors">
             {previewUrl ? (
               <div className="relative w-full h-48 overflow-hidden rounded-md mb-4">
-                <Image src={previewUrl} alt="Iqama Preview" fill className="object-cover" />
+                <Image src={previewUrl} alt="Document Preview" fill className="object-cover" />
               </div>
             ) : (
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
@@ -88,12 +95,12 @@ export function IqamaUploader() {
               </div>
             )}
             
-            <Label htmlFor="iqama-upload" className="cursor-pointer">
+            <Label htmlFor="doc-upload" className="cursor-pointer">
               <div className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90">
                 {previewUrl ? "Change Image" : "Select Image"}
               </div>
               <Input 
-                id="iqama-upload" 
+                id="doc-upload" 
                 type="file" 
                 accept="image/*" 
                 className="hidden" 
@@ -128,7 +135,9 @@ export function IqamaUploader() {
             {extractedData && <CheckCircle className="w-5 h-5 text-green-500" />}
           </CardTitle>
           <CardDescription>
-            Verify the information extracted from your document.
+            {documentId 
+              ? `Saved to Database (ID: ${documentId})`
+              : "Verify the information extracted from your document."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -138,35 +147,20 @@ export function IqamaUploader() {
               <p>Our AI is reading your document...</p>
             </div>
           ) : extractedData ? (
-            <div className="grid grid-cols-1 gap-4">
-              <div className="space-y-1">
-                <Label className="text-muted-foreground text-xs uppercase">Full Name (English)</Label>
-                <div className="font-medium">{extractedData.name || "N/A"}</div>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-muted-foreground text-xs uppercase">Full Name (Arabic)</Label>
-                <div className="font-medium text-right dir-rtl">{extractedData.nameArabic || "N/A"}</div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground text-xs uppercase">Iqama Number</Label>
-                  <div className="font-medium">{extractedData.iqamaNumber || "N/A"}</div>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground text-xs uppercase">Nationality</Label>
-                  <div className="font-medium">{extractedData.nationality || "N/A"}</div>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground text-xs uppercase">Profession</Label>
-                  <div className="font-medium">{extractedData.profession || "N/A"}</div>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground text-xs uppercase">Expiry Date</Label>
-                  <div className="font-medium">{extractedData.expiryDate || "N/A"}</div>
-                </div>
-              </div>
+            <div className="space-y-4">
+              {Object.entries(extractedData).map(([key, value]) => {
+                const isArabic = key.toLowerCase().includes("arabic");
+                return (
+                  <div key={key} className="space-y-1">
+                    <Label className="text-muted-foreground text-xs uppercase">
+                      {key.replace(/([A-Z])/g, ' $1').trim()}
+                    </Label>
+                    <div className={`font-medium bg-muted p-2 rounded-md ${isArabic ? 'text-right dir-rtl' : ''}`}>
+                      {String(value) || "N/A"}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-48 text-muted-foreground text-center">
@@ -177,7 +171,7 @@ export function IqamaUploader() {
         {extractedData && (
           <CardFooter>
             <Button variant="outline" className="w-full">
-              Confirm & Save
+              Confirm Information
             </Button>
           </CardFooter>
         )}
