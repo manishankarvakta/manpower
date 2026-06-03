@@ -1,0 +1,28 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    function isAuthenticated() { return request.auth != null; }
+    function isOwner(userId) { return request.auth.uid == userId; }
+    
+    // Profile Photos (Publicly accessible)
+    match /profile_photos/{userId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId);
+    }
+
+    // Private Worker Documents (Iqama & TUB Cards)
+    match /documents/workers/{userId}/{documentType}/{fileName} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId)
+                   && request.resource.size < 5 * 1024 * 1024 // Limit to 5MB
+                   && request.resource.contentType.matches('image/.*'); // Images only
+    }
+
+    // Payment Proofs
+    match /documents/payments/{contractId}/{fileName} {
+      allow read: if isAuthenticated(); 
+      allow write: if isAuthenticated() && request.resource.contentType.matches('image/.*');
+    }
+  }
+}

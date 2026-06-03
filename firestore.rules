@@ -1,0 +1,61 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() { return request.auth != null; }
+    function isOwner(userId) { return request.auth.uid == userId; }
+    function isAdmin() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'; }
+    function isWorker() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'worker'; }
+    function isContractor() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'contractor'; }
+
+    // 1. Users Collection
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId) || isAdmin();
+    }
+
+    // 2. Workers Collection (Public Profile)
+    match /workers/{workerId} {
+      allow read: if isAuthenticated(); 
+      allow write: if isOwner(workerId) || isAdmin();
+      
+      match /private/{docId} {
+        allow read, write: if isOwner(workerId) || isAdmin();
+      }
+    }
+
+    // 3. Contractors Collection
+    match /contractors/{contractorId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(contractorId) || isAdmin();
+    }
+
+    // 4. Documents Collection (Iqama, TUB Card metadata)
+    match /documents/{documentId} {
+      allow read: if isOwner(resource.data.ownerId) || isAdmin();
+      allow create: if isWorker() && isOwner(request.resource.data.ownerId);
+      allow update, delete: if isOwner(resource.data.ownerId) || isAdmin();
+    }
+
+    // 5. Jobs Collection
+    match /jobs/{jobId} {
+      allow read: if isAuthenticated();
+      allow create: if isContractor() && isOwner(request.resource.data.contractorId);
+      allow update, delete: if isOwner(resource.data.contractorId) || isAdmin();
+    }
+
+    // 6. Applications Collection
+    match /applications/{applicationId} {
+      allow read: if isOwner(resource.data.workerId) || isOwner(resource.data.contractorId) || isAdmin();
+      allow create: if isWorker() && isOwner(request.resource.data.workerId);
+      allow update: if isOwner(resource.data.workerId) || isOwner(resource.data.contractorId) || isAdmin();
+    }
+
+    // 7. Contracts and Payments
+    match /contracts/{contractId} {
+      allow read, update: if isOwner(resource.data.workerId) || isOwner(resource.data.contractorId) || isAdmin();
+      allow create: if isContractor() && isOwner(request.resource.data.contractorId);
+    }
+  }
+}

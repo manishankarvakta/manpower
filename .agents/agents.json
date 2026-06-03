@@ -1,0 +1,80 @@
+{
+  "agents": [
+    {
+      "name": "product_manager",
+      "sub_agents": ["mvp_scope_planner", "feature_prioritization_specialist", "user_journey_specialist"]
+    },
+    {
+      "name": "business_analyst",
+      "sub_agents": []
+    },
+    {
+      "name": "system_architect",
+      "sub_agents": ["route_architecture_specialist", "server_client_boundary_specialist", "scalability_reviewer"]
+    },
+    {
+      "name": "database_architect",
+      "sub_agents": ["firestore_schema_designer", "data_relationship_reviewer", "index_planning_specialist", "search_and_indexing_specialist"]
+    },
+    {
+      "name": "firebase_backend",
+      "sub_agents": ["firebase_client_sdk_specialist", "firebase_admin_sdk_specialist", "firestore_service_builder", "storage_service_builder"]
+    },
+    {
+      "name": "authentication_rbac",
+      "sub_agents": ["google_auth_specialist", "role_guard_specialist", "permission_rules_specialist"]
+    },
+    {
+      "name": "frontend_engineer",
+      "sub_agents": ["dashboard_layout_builder", "form_builder", "marketplace_ui_builder", "state_and_loading_handler", "profile_ui_specialist"]
+    },
+    {
+      "name": "ui_ux_designer",
+      "sub_agents": ["landing_page_designer", "worker_dashboard_designer", "contractor_dashboard_designer", "admin_dashboard_designer"]
+    },
+    {
+      "name": "ai_ocr_extraction",
+      "sub_agents": ["document_upload_flow_specialist", "ocr_extraction_specialist", "ai_data_parser_specialist", "verification_workflow_specialist", "ocr_api_integrator"]
+    },
+    {
+      "name": "marketplace_workflow",
+      "sub_agents": ["job_posting_specialist", "worker_search_specialist", "application_flow_specialist", "hiring_contract_specialist", "notification_specialist"]
+    },
+    {
+      "name": "payment_workflow",
+      "sub_agents": ["manual_payment_specialist", "payment_proof_specialist", "admin_payment_verification_specialist"]
+    },
+    {
+      "name": "review_and_reputation_agent",
+      "sub_agents": ["rating_calculator_specialist", "review_ui_builder"]
+    },
+    {
+      "name": "admin_panel",
+      "sub_agents": []
+    },
+    {
+      "name": "security_engineer",
+      "sub_agents": ["firestore_rules_specialist", "storage_rules_specialist", "sensitive_data_protection_specialist", "abuse_prevention_specialist"]
+    },
+    {
+      "name": "qa_testing",
+      "sub_agents": ["functional_testing_specialist", "role_access_testing_specialist", "security_testing_specialist", "ui_ux_testing_specialist", "mock_data_seeder"]
+    },
+    {
+      "name": "devops_deployment",
+      "sub_agents": []
+    },
+    {
+      "name": "documentation_agent",
+      "sub_agents": ["readme_writer", "setup_guide_writer", "firebase_setup_writer", "user_manual_writer", "admin_manual_writer"]
+    },
+    {
+      "name": "code_review",
+      "sub_agents": []
+    },
+    {
+      "name": "project_manager",
+      "sub_agents": []
+    }
+  ]
+}
