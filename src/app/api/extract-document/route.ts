@@ -153,20 +153,28 @@ export async function POST(req: NextRequest) {
               .toBuffer();
 
             // Save to local server file system (public/uploads/profile_photos)
-            const { promises: fs } = await import("fs");
-            const path = await import("path");
-            
-            const uploadDir = path.join(process.cwd(), "public", "uploads", "profile_photos");
-            await fs.mkdir(uploadDir, { recursive: true });
-            
             // Use iqamaNumber for filename if available, otherwise fallback to uuid
             const baseFileName = data.iqamaNumber || data.cardNumber || data.passportNumber || uuidv4();
             const fileName = `${baseFileName}.jpg`;
-            const filePath = path.join(uploadDir, fileName);
-            await fs.writeFile(filePath, croppedBuffer);
+            
+            // Upload to Firebase Storage instead of local public folder
+            // Local files added at runtime are not served by Next.js until restart
+            const bucket = adminStorage.bucket();
+            const fileRef = bucket.file(`profile_photos/${fileName}`);
+            
+            await fileRef.save(croppedBuffer, {
+              metadata: {
+                contentType: 'image/jpeg',
+              }
+            });
+            
+            // Get a long-lived signed URL so the Next.js Image component can load it
+            const [url] = await fileRef.getSignedUrl({
+              action: 'read',
+              expires: '01-01-2099' // Far future expiry
+            });
 
-            // Set the public URL to the local file path
-            profilePhotoUrl = `/uploads/profile_photos/${fileName}`;
+            profilePhotoUrl = url;
             data.profilePhotoUrl = profilePhotoUrl;
           }
         }
@@ -194,6 +202,15 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error("Error extracting document data:", error);
+    
+    // Check if it's a Gemini rate limit error
+    if (error.message?.includes("429") || error.message?.includes("Quota exceeded") || error.status === 429) {
+      return NextResponse.json(
+        { error: "AI Rate Limit Exceeded. The free tier of the AI model is currently maxed out. Please try again in about 1 minute." },
+        { status: 429 }
+      );
+    }
+
     return NextResponse.json(
       { error: error.message || "Failed to process image" },
       { status: 500 }
