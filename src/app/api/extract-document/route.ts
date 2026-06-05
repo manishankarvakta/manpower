@@ -158,19 +158,28 @@ export async function POST(req: NextRequest) {
         if (bboxMatches) {
           const [_, ymin, xmin, ymax, xmax] = bboxMatches.map(Number);
           
-          // Get original image dimensions
-          const metadata = await sharp(fileBuffer).metadata();
+          // Get original image dimensions (respecting EXIF rotation)
+          const metadata = await sharp(fileBuffer).rotate().metadata();
           const { width, height } = metadata;
 
           if (width && height) {
-            // Convert normalized coordinates (0-1000) to pixel values
-            const left = Math.round((xmin / 1000) * width);
-            const top = Math.round((ymin / 1000) * height);
-            const cropWidth = Math.round(((xmax - xmin) / 1000) * width);
-            const cropHeight = Math.round(((ymax - ymin) / 1000) * height);
+            // Convert normalized coordinates (0-1000) to pixel values and safely clamp
+            const left = Math.max(0, Math.min(Math.round((xmin / 1000) * width), width - 1));
+            const top = Math.max(0, Math.min(Math.round((ymin / 1000) * height), height - 1));
+            let cropWidth = Math.max(1, Math.round(((xmax - xmin) / 1000) * width));
+            let cropHeight = Math.max(1, Math.round(((ymax - ymin) / 1000) * height));
+
+            // Ensure we don't go out of bounds
+            if (left + cropWidth > width) {
+                cropWidth = width - left;
+            }
+            if (top + cropHeight > height) {
+                cropHeight = height - top;
+            }
 
             // Crop image
             const croppedBuffer = await sharp(fileBuffer)
+              .rotate()
               .extract({ left, top, width: cropWidth, height: cropHeight })
               .toFormat("jpeg")
               .toBuffer();
