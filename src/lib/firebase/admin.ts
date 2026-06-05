@@ -10,6 +10,7 @@ if (!admin.apps.length) {
           ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") 
           : "mock-private-key",
       }),
+      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "manpower-8565b.firebasestorage.app",
     });
   } catch (error) {
     console.error("Firebase admin initialization error", error);
