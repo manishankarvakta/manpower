@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { Archiver } from 'archiver';
+import { ZipArchive } from 'archiver';
 import path from 'path';
 import fs from 'fs';
 import { Readable } from 'stream';
@@ -12,7 +12,7 @@ export async function GET() {
       return NextResponse.json({ error: 'No photos found' }, { status: 404 });
     }
 
-    const archive = new Archiver('zip', {
+    const archive = new ZipArchive({
       zlib: { level: 9 }
     });
 
