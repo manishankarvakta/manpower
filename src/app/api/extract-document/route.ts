@@ -127,6 +127,29 @@ export async function POST(req: NextRequest) {
     const data = JSON.parse(response.text || "{}");
 
     let profilePhotoUrl = null;
+    let documentImageUrl = null;
+
+    // Upload the original full document image
+    try {
+      const baseFileName = data.iqamaNumber || data.cardNumber || data.passportNumber || uuidv4();
+      const fileName = `${baseFileName}.jpg`;
+      const bucket = adminStorage.bucket();
+      const docFileRef = bucket.file(`documents/${documentType}_${fileName}`);
+      
+      await docFileRef.save(fileBuffer, {
+        metadata: { contentType: file.type || 'image/jpeg' }
+      });
+      
+      const [docUrl] = await docFileRef.getSignedUrl({
+        action: 'read',
+        expires: '01-01-2099'
+      });
+      
+      documentImageUrl = docUrl;
+      data.documentImageUrl = documentImageUrl;
+    } catch (docError) {
+      console.error("Error uploading full document:", docError);
+    }
 
     // Handle photo cropping if bounding box is provided
     if (data.photoBoundingBox) {
@@ -189,6 +212,7 @@ export async function POST(req: NextRequest) {
       documentType,
       extractedData: data,
       profilePhotoUrl,
+      documentImageUrl,
       status: "pending_verification",
       createdAt: new Date().toISOString(),
     });
@@ -197,7 +221,8 @@ export async function POST(req: NextRequest) {
       success: true, 
       documentId: docRef.id,
       data,
-      profilePhotoUrl
+      profilePhotoUrl,
+      documentImageUrl
     }, { status: 200 });
 
   } catch (error: any) {

@@ -22,7 +22,7 @@ export function EditWorkerForm({ worker }: EditWorkerFormProps) {
   // Initialize formData with all worker fields except system/read-only fields
   const getInitialFormData = () => {
     const data = { ...worker };
-    const omitKeys = ['id', 'profilePhotoUrl', 'createdAt', 'updatedAt', 'role', 'extractedDocumentId', 'documentType'];
+    const omitKeys = ['id', 'profilePhotoUrl', 'documentImageUrl', 'createdAt', 'updatedAt', 'role', 'extractedDocumentId', 'documentType'];
     omitKeys.forEach(key => delete data[key]);
     
     // Ensure contact fields exist

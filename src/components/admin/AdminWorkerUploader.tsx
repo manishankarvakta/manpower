@@ -225,7 +225,7 @@ export function AdminWorkerUploader() {
               </div>
 
               {Object.entries(extractedData)
-                .filter(([key]) => key !== 'profilePhotoUrl')
+                .filter(([key]) => key !== 'profilePhotoUrl' && key !== 'documentImageUrl')
                 .map(([key, value]) => {
                   const isArabic = key.toLowerCase().includes("arabic");
                   return (
