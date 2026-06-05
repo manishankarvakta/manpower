@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+// @ts-ignore
 import { ZipArchive } from 'archiver';
 import path from 'path';
 import fs from 'fs';
