@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DeleteWorkerButton } from "@/components/admin/DeleteWorkerButton";
 import Link from "next/link";
 import Image from "next/image";
-import { Edit, Trash2, Loader2 } from "lucide-react";
+import { Edit, Trash2, Loader2, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { bulkDeleteWorkersByAdmin } from "@/app/actions/admin";
@@ -166,6 +166,12 @@ export function WorkerDataTable({ workers }: WorkerDataTableProps) {
                     </span>
                   </TableCell>
                   <TableCell className="text-right flex items-center justify-end gap-2">
+                    <Link href={`/admin/worker/${worker.id}`}>
+                      <Button variant="ghost" size="sm" className="gap-2 text-blue-600 hover:text-blue-800">
+                        <Eye className="w-4 h-4" />
+                        View
+                      </Button>
+                    </Link>
                     <Link href={`/admin/worker/${worker.id}/edit`}>
                       <Button variant="ghost" size="sm" className="gap-2">
                         <Edit className="w-4 h-4" />
