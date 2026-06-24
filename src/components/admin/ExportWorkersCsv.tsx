@@ -40,7 +40,7 @@ export function ExportWorkersCsv({ workers }: ExportWorkersCsvProps) {
       csvRows.push(row.join(","));
     });
 
-    const csvString = csvRows.join("\n");
+    const csvString = "\uFEFF" + csvRows.join("\n");
     const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     
