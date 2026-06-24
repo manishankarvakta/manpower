@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { updateWorkerByAdmin } from "@/app/actions/admin";
@@ -18,6 +18,9 @@ interface EditWorkerFormProps {
 export function EditWorkerForm({ worker }: EditWorkerFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(worker.profilePhotoUrl || null);
+  const [newPhotoUrl, setNewPhotoUrl] = useState<string | null>(null);
   
   // Initialize formData with all worker fields except system/read-only fields
   const getInitialFormData = () => {
@@ -41,10 +44,54 @@ export function EditWorkerForm({ worker }: EditWorkerFormProps) {
     }));
   };
 
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setPhotoPreview(URL.createObjectURL(file));
+
+      const iqamaId = formData.iqamaNumber || worker.iqamaNumber;
+      if (!iqamaId) {
+        toast.error("Please ensure Iqama Number is filled before uploading photo.");
+        return;
+      }
+
+      setUploadingPhoto(true);
+      const fd = new FormData();
+      fd.append("photo", file);
+      fd.append("iqamaNumber", iqamaId);
+
+      try {
+        const res = await fetch("/api/admin/upload-profile-photo", {
+          method: "POST",
+          body: fd
+        });
+        const result = await res.json();
+        if (res.ok && result.success) {
+          setNewPhotoUrl(result.profilePhotoUrl);
+          toast.success("Profile photo uploaded successfully!");
+        } else {
+          throw new Error(result.error || "Failed to upload photo");
+        }
+      } catch (err: any) {
+        console.error(err);
+        toast.error(err.message || "Failed to upload photo.");
+      } finally {
+        setUploadingPhoto(false);
+      }
+    }
+  };
+
   const handleUpdate = async () => {
     setLoading(true);
     try {
-      const result = await updateWorkerByAdmin(worker.id, formData);
+      const updateData = {
+        ...formData
+      };
+      if (newPhotoUrl) {
+        updateData.profilePhotoUrl = newPhotoUrl;
+      }
+
+      const result = await updateWorkerByAdmin(worker.id, updateData);
       if (result.success) {
         toast.success("Worker updated successfully!");
         router.refresh(); // Refresh data first
@@ -68,13 +115,41 @@ export function EditWorkerForm({ worker }: EditWorkerFormProps) {
         <CardTitle>Worker Details</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {worker.profilePhotoUrl && (
-          <div className="flex justify-center mb-6">
-            <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-primary shadow-lg">
-              <Image src={worker.profilePhotoUrl} alt="Profile Photo" fill className="object-cover" />
+        <div className="flex flex-col items-center gap-4 mb-6">
+          {photoPreview ? (
+            <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-primary shadow-lg bg-muted">
+              <Image src={photoPreview} alt="Profile Photo" fill className="object-cover" />
             </div>
+          ) : (
+            <div className="w-32 h-32 rounded-full bg-muted flex items-center justify-center border-4 border-dashed text-xs text-muted-foreground">
+              No Photo
+            </div>
+          )}
+
+          <div className="flex flex-col items-center gap-1.5">
+            <Label htmlFor="profile-photo-upload" className="cursor-pointer">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border bg-background hover:bg-muted text-sm font-medium">
+                {uploadingPhoto ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4" />
+                )}
+                Change Profile Photo
+              </div>
+              <input 
+                type="file" 
+                id="profile-photo-upload" 
+                accept="image/*" 
+                onChange={handlePhotoChange} 
+                disabled={uploadingPhoto}
+                className="hidden" 
+              />
+            </Label>
+            <span className="text-xs text-muted-foreground">
+              Upload will match iqamaNumber-profile naming convention
+            </span>
           </div>
-        )}
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {Object.entries(formData).map(([key, value]) => {
@@ -98,7 +173,7 @@ export function EditWorkerForm({ worker }: EditWorkerFormProps) {
         </div>
       </CardContent>
       <CardFooter>
-        <Button onClick={handleUpdate} disabled={loading} className="w-full">
+        <Button onClick={handleUpdate} disabled={loading || uploadingPhoto} className="w-full">
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
