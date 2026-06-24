@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ExportWorkersCsv } from "@/components/admin/ExportWorkersCsv";
 import { WorkerDataTable } from "@/components/admin/WorkerDataTable";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +21,12 @@ export default async function AdminWorkerListPage() {
         </div>
         <div className="flex gap-2">
           <ExportWorkersCsv workers={workers} />
+          <Link href="/admin/worker/bulk-entry">
+            <Button variant="outline" className="gap-2">
+              <Upload className="w-4 h-4" />
+              Bulk Upload
+            </Button>
+          </Link>
           <Link href="/admin/worker/new">
             <Button className="gap-2">
               <Plus className="w-4 h-4" />

@@ -37,7 +37,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" dir="ltr" suppressHydrationWarning>
+    <html lang="en" dir="ltr" suppressHydrationWarning data-scroll-behavior="smooth">
       <body suppressHydrationWarning className={`${inter.variable} ${outfit.variable} font-sans min-h-screen bg-background text-foreground antialiased flex flex-col`}>
         <AuthProvider>
           <div className="flex-1 flex flex-col relative w-full">
