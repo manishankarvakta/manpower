@@ -245,6 +245,63 @@ export async function updateWorkerByAdmin(workerId: string, data: any) {
 }
 
 export async function deleteWorkerByAdmin(workerId: string) {
+  // Find worker first to get iqamaNumber for local/remote photo deletion
+  let iqamaNumber = "";
+  let profilePhotoUrl = "";
+
+  if (isMockDb) {
+    const db = readMockDb();
+    const worker = db.find((u: any) => u.id === workerId);
+    if (worker) {
+      iqamaNumber = worker.iqamaNumber || "";
+      profilePhotoUrl = worker.profilePhotoUrl || "";
+    }
+  } else {
+    try {
+      const doc = await adminDb.collection("users").doc(workerId).get();
+      if (doc.exists) {
+        const worker = doc.data();
+        if (worker) {
+          iqamaNumber = worker.iqamaNumber || "";
+          profilePhotoUrl = worker.profilePhotoUrl || "";
+        }
+      }
+    } catch (e) {
+      console.error("Failed to read worker details before delete:", e);
+    }
+  }
+
+  // Delete photo locally if iqamaNumber is available
+  if (iqamaNumber) {
+    try {
+      const fs = require("fs");
+      const path = require("path");
+      const localPath = path.join(process.cwd(), "public", "uploads", "profile_photos", `${iqamaNumber}-profile.jpg`);
+      if (fs.existsSync(localPath)) {
+        fs.unlinkSync(localPath);
+        console.log("Deleted local profile photo:", localPath);
+      }
+    } catch (localDelErr) {
+      console.error("Error deleting local profile photo:", localDelErr);
+    }
+  }
+
+  // Delete photo from Firebase Storage if profilePhotoUrl exists
+  if (!isMockDb && iqamaNumber) {
+    try {
+      const { adminStorage } = require("@/lib/firebase/admin");
+      const bucket = adminStorage.bucket();
+      const fileRef = bucket.file(`profile_photos/${iqamaNumber}-profile.jpg`);
+      const [exists] = await fileRef.exists();
+      if (exists) {
+        await fileRef.delete();
+        console.log("Deleted Firebase profile photo:", iqamaNumber);
+      }
+    } catch (fbDelErr) {
+      console.error("Error deleting Firebase profile photo:", fbDelErr);
+    }
+  }
+
   if (isMockDb) {
     let db = readMockDb();
     db = db.filter((u: any) => u.id !== workerId);
@@ -262,6 +319,68 @@ export async function deleteWorkerByAdmin(workerId: string) {
 }
 
 export async function bulkDeleteWorkersByAdmin(workerIds: string[]) {
+  // Find all corresponding iqamaNumbers and profile URLs
+  const workersInfo: { iqamaNumber: string }[] = [];
+
+  if (isMockDb) {
+    const db = readMockDb();
+    db.forEach((u: any) => {
+      if (workerIds.includes(u.id) && u.iqamaNumber) {
+        workersInfo.push({ iqamaNumber: u.iqamaNumber });
+      }
+    });
+  } else {
+    try {
+      for (const id of workerIds) {
+        const doc = await adminDb.collection("users").doc(id).get();
+        if (doc.exists) {
+          const worker = doc.data();
+          if (worker && worker.iqamaNumber) {
+            workersInfo.push({ iqamaNumber: worker.iqamaNumber });
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Failed to read workers details before bulk delete:", e);
+    }
+  }
+
+  // Delete photos locally and from Firebase Storage
+  const fs = require("fs");
+  const path = require("path");
+  const localDir = path.join(process.cwd(), "public", "uploads", "profile_photos");
+
+  for (const info of workersInfo) {
+    if (info.iqamaNumber) {
+      // Local delete
+      try {
+        const localPath = path.join(localDir, `${info.iqamaNumber}-profile.jpg`);
+        if (fs.existsSync(localPath)) {
+          fs.unlinkSync(localPath);
+          console.log("Bulk: Deleted local profile photo:", localPath);
+        }
+      } catch (err) {
+        console.error("Bulk: Error deleting local photo:", err);
+      }
+
+      // Firebase Storage delete
+      if (!isMockDb) {
+        try {
+          const { adminStorage } = require("@/lib/firebase/admin");
+          const bucket = adminStorage.bucket();
+          const fileRef = bucket.file(`profile_photos/${info.iqamaNumber}-profile.jpg`);
+          const [exists] = await fileRef.exists();
+          if (exists) {
+            await fileRef.delete();
+            console.log("Bulk: Deleted Firebase profile photo:", info.iqamaNumber);
+          }
+        } catch (err) {
+          console.error("Bulk: Error deleting Firebase photo:", err);
+        }
+      }
+    }
+  }
+
   if (isMockDb) {
     let db = readMockDb();
     db = db.filter((u: any) => !workerIds.includes(u.id));

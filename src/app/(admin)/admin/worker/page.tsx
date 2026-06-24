@@ -21,6 +21,12 @@ export default async function AdminWorkerListPage() {
         </div>
         <div className="flex gap-2">
           <ExportWorkersCsv workers={workers} />
+          <a href="/api/admin/download-photos" download>
+            <Button variant="outline" className="gap-2">
+              <Upload className="w-4 h-4 rotate-180" />
+              Download Profile Photos
+            </Button>
+          </a>
           <Link href="/admin/worker/bulk-entry">
             <Button variant="outline" className="gap-2">
               <Upload className="w-4 h-4" />

@@ -149,44 +149,7 @@ export async function POST(req: NextRequest) {
 
     // Get clean document id based on Iqama number, card number, or passport number
     const idString = data.iqamaNumber || data.cardNumber || data.passportNumber || uuidv4();
-    const docFileName = `${idString}.${docExtension}`;
     const profileFileName = `${idString}-profile.jpg`; // Standardized cropped photo to jpg
-
-    // Write full document image to local directory public/uploads/profile_photos for mock DB downloads, if needed
-    try {
-      const fs = require("fs");
-      const path = require("path");
-      const localDir = path.join(process.cwd(), "public", "uploads", "profile_photos");
-      if (!fs.existsSync(localDir)) {
-        fs.mkdirSync(localDir, { recursive: true });
-      }
-      fs.writeFileSync(path.join(localDir, docFileName), fileBuffer);
-      console.log("Saved full document locally as:", docFileName);
-    } catch (localError) {
-      console.error("Failed to save full document locally:", localError);
-    }
-
-    // Upload the original full document image to Firebase Storage
-    try {
-      const bucket = adminStorage.bucket();
-      const docFileRef = bucket.file(`documents/${documentType}_${docFileName}`);
-      
-      await docFileRef.save(fileBuffer, {
-        metadata: { contentType: fileType }
-      });
-      
-      const [docUrl] = await docFileRef.getSignedUrl({
-        action: 'read',
-        expires: '01-01-2099'
-      });
-      
-      documentImageUrl = docUrl;
-      data.documentImageUrl = documentImageUrl;
-    } catch (docError) {
-      console.warn("Firebase Storage unavailable for full document, using base64 fallback.");
-      documentImageUrl = `data:${fileType};base64,${base64Data}`;
-      data.documentImageUrl = documentImageUrl;
-    }
 
     // Handle photo cropping if bounding box is provided
     if (data.photoBoundingBox) {

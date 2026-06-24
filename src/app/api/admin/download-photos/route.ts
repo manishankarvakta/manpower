@@ -21,7 +21,15 @@ export async function GET() {
       console.error('Archive error:', err);
     });
 
-    archive.directory(uploadDir, false);
+    // Only zip files ending with '-profile.jpg' or similar profile identifier
+    const files = fs.readdirSync(uploadDir);
+    files.forEach(file => {
+      if (file.includes("-profile.")) {
+        const filePath = path.join(uploadDir, file);
+        archive.file(filePath, { name: file });
+      }
+    });
+
     archive.finalize();
 
     const nodeReadable = Readable.from(archive);
