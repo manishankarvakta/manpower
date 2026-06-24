@@ -11,16 +11,21 @@ export function ExportWorkersCsv({ workers }: ExportWorkersCsvProps) {
   const handleExport = () => {
     if (!workers || workers.length === 0) return;
 
-    // Get all unique keys from all workers to use as headers
-    const headersSet = new Set<string>();
-    workers.forEach(worker => {
-      Object.keys(worker).forEach(key => headersSet.add(key));
-    });
-    
-    // Ensure id, name, email are first, and profilePhotoUrl is explicitly included
-    const prioritizedHeaders = ["id", "name", "email", "phone", "profilePhotoUrl"];
-    const otherHeaders = Array.from(headersSet).filter(h => !prioritizedHeaders.includes(h));
-    const headers = [...prioritizedHeaders, ...otherHeaders];
+    // Defined headers as requested by the user
+    const headers = [
+      "SL",
+      "Name (Arabic)",
+      "Name (English)",
+      "Iqama Number",
+      "Expiry Date",
+      "Nationality",
+      "CATEGORIES",
+      "Occupation (Arabic)",
+      "Company Name (Arabic)",
+      "Work Area (Arabic)",
+      "TRADE",
+      "PICTURE"
+    ];
 
     // Build CSV content
     const csvRows = [];
@@ -28,11 +33,36 @@ export function ExportWorkersCsv({ workers }: ExportWorkersCsvProps) {
     csvRows.push(headers.map(header => `"${header}"`).join(","));
 
     // Data rows
-    workers.forEach(worker => {
-      const row = headers.map(header => {
-        let val = worker[header];
-        if (val === null || val === undefined) val = "";
-        
+    workers.forEach((worker, index) => {
+      // Determine file extension for profile photo url if present
+      let fileExt = "jpg";
+      const photoUrl = worker.profilePhotoUrl || "";
+      if (photoUrl) {
+        if (photoUrl.includes(".png") || photoUrl.includes("image/png")) {
+          fileExt = "png";
+        } else if (photoUrl.includes(".jpeg") || photoUrl.includes("image/jpeg")) {
+          fileExt = "jpeg";
+        } else if (photoUrl.includes(".webp") || photoUrl.includes("image/webp")) {
+          fileExt = "webp";
+        }
+      }
+      const iqamaId = worker.iqamaNumber || "";
+      const pictureFilename = iqamaId ? `${iqamaId}-profile.${fileExt}` : "";
+
+      const row = [
+        String(index + 1), // SL
+        worker.nameArabic || "", // Name (Arabic)
+        worker.name || "", // Name (English)
+        iqamaId, // Iqama Number
+        worker.expiryDate || "", // Expiry Date
+        worker.nationality || "", // Nationality
+        worker.categories || "worker", // CATEGORIES
+        worker.professionArabic || "", // Occupation (Arabic)
+        worker.employerArabic || "", // Company Name (Arabic)
+        worker.placeOfWorkArabic || "", // Work Area (Arabic)
+        worker.profession || "", // TRADE
+        pictureFilename // PICTURE (photo filename matching the pattern: iqamaid-profile.jpg/png etc.)
+      ].map(val => {
         // Escape quotes, remove/normalize newlines, and wrap in quotes
         const strVal = String(val)
           .replace(/"/g, '""')
