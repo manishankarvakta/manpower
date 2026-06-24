@@ -19,6 +19,17 @@ interface QueueItem {
   error?: string;
 }
 
+const getItemProgress = (status: string) => {
+  switch (status) {
+    case "idle": return 0;
+    case "extracting": return 40;
+    case "saving": return 80;
+    case "success": return 100;
+    case "error": return 100;
+    default: return 0;
+  }
+};
+
 export default function WorkerBulkEntryPage() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isConfirmed, setIsConfirmed] = useState(false);
@@ -216,11 +227,7 @@ export default function WorkerBulkEntryPage() {
                       <span>Queue Progress</span>
                       <span>{processedFiles} / {totalFiles} Completed</span>
                     </div>
-                    <Progress value={progressPercent}>
-                      <ProgressTrack>
-                        <ProgressIndicator />
-                      </ProgressTrack>
-                    </Progress>
+                    <Progress value={progressPercent} className="w-full" />
                   </div>
                 )}
               </CardContent>
@@ -297,7 +304,7 @@ export default function WorkerBulkEntryPage() {
                           {isSuccess && <Check className="w-3.5 h-3.5" />}
                         </div>
 
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <p className={`text-sm font-medium truncate ${isSuccess ? "text-muted-foreground line-through" : "text-foreground"}`}>
                             {item.file.name}
                           </p>
@@ -307,9 +314,21 @@ export default function WorkerBulkEntryPage() {
                             </p>
                           )}
                           {item.error && (
-                            <p className="text-xs text-red-500 font-medium mt-0.5 truncate">
+                            <p className="text-xs text-red-600 font-semibold mt-0.5">
                               Error: {item.error}
                             </p>
+                          )}
+                          
+                          {/* Mini Progress Bar for each item */}
+                          {item.status !== "idle" && (
+                            <div className="w-full max-w-[240px] mt-2">
+                              <Progress 
+                                value={getItemProgress(item.status)} 
+                                className={`h-1.5 w-full ${
+                                  isFailed ? "[&_[data-slot=progress-indicator]]:bg-destructive" : ""
+                                }`} 
+                              />
+                            </div>
                           )}
                         </div>
                       </div>
