@@ -2,7 +2,8 @@ import * as admin from "firebase-admin";
 
 const hasServiceAccount = 
   process.env.FIREBASE_CLIENT_EMAIL && 
-  process.env.FIREBASE_PRIVATE_KEY;
+  process.env.FIREBASE_PRIVATE_KEY &&
+  process.env.FIREBASE_PRIVATE_KEY.includes("-----BEGIN PRIVATE KEY-----");
 
 const options: admin.AppOptions = {
   projectId: process.env.FIREBASE_PROJECT_ID || "manpower-8565b",
