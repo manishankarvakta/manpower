@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
     let schema: Schema;
 
     if (documentType === "iqama") {
-      prompt = "Extract details from this Saudi Iqama (Residence Permit). Make sure to extract the bounding box for the profile photo. Return strictly JSON.";
+      prompt = "Extract details from this Saudi Iqama (Residence Permit). Identify the face/profile photo on the card very carefully and extract its bounding box in [ymin, xmin, ymax, xmax] format normalized to 1000. Ensure it includes only the person's photo face, not any surrounding text or details. Return strictly JSON.";
       schema = iqamaSchema;
     } else if (documentType === "tub") {
       prompt = "Extract details from this Saudi TUB card. Return strictly JSON.";
