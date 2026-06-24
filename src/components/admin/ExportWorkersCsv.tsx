@@ -33,8 +33,10 @@ export function ExportWorkersCsv({ workers }: ExportWorkersCsvProps) {
         let val = worker[header];
         if (val === null || val === undefined) val = "";
         
-        // Escape quotes and wrap in quotes
-        const strVal = String(val).replace(/"/g, '""');
+        // Escape quotes, remove/normalize newlines, and wrap in quotes
+        const strVal = String(val)
+          .replace(/"/g, '""')
+          .replace(/\r?\n|\r/g, ' ');
         return `"${strVal}"`;
       });
       csvRows.push(row.join(","));
